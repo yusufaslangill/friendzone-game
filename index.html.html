@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friend Zone — Adjective Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --panel: #13171f;
+    --panel2: #0f1319;
+    --cyan: #00e5c8;
+    --cyan-dim: rgba(0,229,200,0.18);
+    --cyan-pale: rgba(0,229,200,0.07);
+    --pink: #ff2d78;
+    --pink-dim: rgba(255,45,120,0.18);
+    --yellow: #f0c040;
+    --white: #ddeeff;
+    --muted: #4a6070;
+    --positive: rgba(0,229,150,0.15);
+    --positive-light: #00e596;
+    --negative: rgba(255,45,80,0.15);
+    --negative-light: #ff2d50;
+    --neutral: rgba(80,120,180,0.15);
+    --neutral-light: #5090cc;
+    --border: rgba(0,229,200,0.18);
+    --shadow: 0 8px 32px rgba(0,0,0,0.7);
+    --screen-tint: transparent;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-head: 'Rajdhani', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  /* Per-screen tint overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--screen-tint);
+    pointer-events: none;
+    z-index: 0;
+    transition: background 1.2s ease;
+  }
+
+  /* Blitz red flash overlay */
+  #blitz-flash {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,45,80,0);
+    pointer-events: none;
+    z-index: 999;
+  }
+  #blitz-flash.active {
+    animation: blitzEnd 1.4s ease forwards;
+  }
+  @keyframes blitzEnd {
+    0%   { background: rgba(255,45,80,0); }
+    15%  { background: rgba(255,45,80,0.5); }
+    45%  { background: rgba(255,45,80,0.28); }
+    75%  { background: rgba(255,45,80,0.12); }
+    100% { background: rgba(255,45,80,0); }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* Grid doku + neon corner glow */
+  body {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgba(0,229,200,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,200,0.03) 1px, transparent 1px);
+    background-size: 36px 36px;
+    color: var(--white);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 0% 0%, rgba(0,229,200,0.09) 0%, transparent 45%),
+      radial-gradient(ellipse at 100% 0%, rgba(0,180,200,0.06) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(13,15,20,0.6) 0%, transparent 70%),
+      radial-gradient(ellipse at 0% 100%, rgba(0,80,100,0.08) 0%, transparent 40%),
+      radial-gradient(ellipse at 100% 100%, rgba(255,45,120,0.06) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; animation: fadeIn 0.4s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ===== HEADER ===== */
+  .game-header {
+    text-align: center;
+    padding: 52px 20px 24px;
+    position: relative;
+  }
+
+  .game-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 400px; height: 200px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,229,200,0.13) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .game-header > * { position: relative; z-index: 1; }
+
+  .game-header .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 16px;
+    opacity: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    text-shadow: 0 0 14px rgba(0,229,200,0.6);
+  }
+  .game-header .eyebrow::before,
+  .game-header .eyebrow::after {
+    content: '';
+    display: inline-block;
+    width: 32px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan));
+    opacity: 0.5;
+  }
+  .game-header .eyebrow::after {
+    background: linear-gradient(90deg, var(--cyan), transparent);
+  }
+
+  .game-header h1 {
+    font-family: var(--font-head);
+    font-size: clamp(60px, 13vw, 108px);
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white);
+    text-shadow: 0 0 40px rgba(0,229,200,0.25), 0 0 80px rgba(0,229,200,0.1);
+  }
+
+  .game-header h1 .friend-part {
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,229,200,0.6), 0 0 60px rgba(0,229,200,0.25);
+  }
+
+  .game-header .subtitle {
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Cyan divider */
+  .gold-line {
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    margin: 28px auto;
+    position: relative;
+    opacity: 0.4;
+  }
+  .gold-line::after {
+    content: '◈';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--cyan);
+    font-size: 12px;
+    background: var(--bg);
+    padding: 0 8px;
+    opacity: 0.7;
+  }
+
+  /* ===== MODE CARDS ===== */
+  .modes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .mode-card {
+    background: var(--panel);
+    border: 1px solid rgba(0,229,200,0.15);
+    border-radius: 12px;
+    padding: 32px 24px 24px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    overflow: hidden;
+    animation: cardPulse 4s ease-in-out infinite;
+  }
+  .mode-card:nth-child(2) { animation-delay: 1.3s; }
+  .mode-card:nth-child(3) { animation-delay: 2.6s; }
+
+  /* Üst kenar neon şeridi */
+  .mode-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.5;
+    transition: opacity 0.3s;
+  }
+
+  /* Sol kenar dikey çizgi */
+  .mode-card::before {
+    content: '';
+    position: absolute;
+    top: 20%; left: 0;
+    width: 2px; height: 60%;
+    background: linear-gradient(180deg, transparent, var(--cyan), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  @keyframes cardPulse {
+    0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,0.5); border-color: rgba(0,229,200,0.12); }
+    50% { box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 16px rgba(0,229,200,0.07); border-color: rgba(0,229,200,0.3); }
+  }
+
+  .mode-card:hover {
+    border-color: rgba(0,229,200,0.55);
+    transform: translateY(-5px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.7), 0 0 24px rgba(0,229,200,0.12);
+  }
+  .mode-card:hover::before { opacity: 1; }
+  .mode-card:hover::after { opacity: 1; }
+
+  .mode-icon {
+    font-size: 30px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px; height: 56px;
+    border-radius: 10px;
+    background: rgba(0,229,200,0.06);
+    border: 1px solid rgba(0,229,200,0.18);
+    color: var(--cyan);
+  }
+
+  .mode-card h2 {
+    font-family: var(--font-head);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .mode-card p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 18px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    border: 1px solid rgba(0,229,200,0.25);
+    padding: 4px 12px;
+    border-radius: 3px;
+    background: rgba(0,229,200,0.05);
+  }
+
+  /* ===== GAME AREA ===== */
+  .game-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .game-title {
+    font-family: var(--font-head);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: 0 0 16px rgba(0,229,200,0.4);
+  }
+  .back-btn {
+    background: transparent;
+    border: 1px solid rgba(0,229,200,0.2);
+    color: var(--muted);
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 10px rgba(0,229,200,0.15); }
+
+  /* Score / lives bar */
+  .status-bar { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .status-item { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .status-item strong { color: var(--cyan); font-size: 18px; text-shadow: 0 0 10px rgba(0,229,200,0.5); }
+  .lives { display: flex; gap: 4px; }
+  .life { font-size: 16px; }
+  .life.lost { opacity: 0.15; filter: grayscale(1); }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: rgba(0,229,200,0.05);
+    border-radius: 2px;
+    height: 2px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    border: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), rgba(0,229,200,0.6));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px rgba(0,229,200,0.6);
+  }
+
+  /* ===== MATCH GAME ===== */
+  .match-instruction {
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+  .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .match-col { display: flex; flex-direction: column; gap: 8px; }
+  .match-card {
+    background: var(--panel);
+    border: 1px solid rgba(0,229,200,0.12);
+    border-radius: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: center;
+    transition: all 0.2s;
+    user-select: none;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.4;
+    color: var(--white);
+  }
+  #match-turkish .match-card { font-size: 11px; text-align: left; justify-content: flex-start; min-height: 56px; color: var(--muted); }
+  #match-turkish .match-card.selected { color: var(--cyan); }
+  #match-turkish .match-card.matched { color: var(--positive-light); }
+  .match-card:hover { border-color: rgba(0,229,200,0.4); background: rgba(0,229,200,0.04); }
+  .match-card.selected { border-color: var(--cyan); background: var(--cyan-pale); color: var(--cyan); box-shadow: 0 0 12px rgba(0,229,200,0.15); }
+  .match-card.correct { border-color: var(--positive-light); background: var(--positive); color: var(--positive-light); pointer-events: none; }
+  .match-card.wrong { border-color: var(--negative-light); background: var(--negative); color: var(--negative-light); animation: shake 0.3s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .match-card.matched { border-color: var(--positive-light); background: var(--positive); color: var(--positive-light); pointer-events: none; opacity: 0.55; }
+
+  /* ===== BUILD GAME ===== */
+  .build-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start; }
+  @media(max-width:680px) { .build-layout { grid-template-columns: 1fr; } }
+
+  .question-card {
+    background: var(--panel);
+    border: 1px solid rgba(0,229,200,0.15);
+    border-radius: 12px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.4;
+  }
+  .question-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    opacity: 0.7;
+    margin-bottom: 12px;
+  }
+  .question-text {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 24px;
+    color: var(--white);
+    letter-spacing: 0.5px;
+  }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .option-btn {
+    background: var(--panel2);
+    border: 1px solid rgba(0,229,200,0.12);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 14px 12px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 14px;
+    transition: all 0.18s;
+    letter-spacing: 0.3px;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-pale); box-shadow: 0 0 12px rgba(0,229,200,0.1); }
+  .option-btn.correct { border-color: var(--positive-light); background: var(--positive); color: var(--positive-light); }
+  .option-btn.wrong { border-color: var(--negative-light); background: var(--negative); color: var(--negative-light); animation: shake 0.3s; }
+  .option-btn:disabled { cursor: default; }
+
+  /* Profile card */
+  .profile-card {
+    background: var(--panel);
+    border: 1px solid rgba(0,229,200,0.15);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    position: sticky;
+    top: 20px;
+  }
+  .profile-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: rgba(0,229,200,0.06);
+    border: 2px solid rgba(0,229,200,0.25);
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 0 20px rgba(0,229,200,0.1);
+  }
+  .profile-name {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 4px;
+  }
+  .profile-traits { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; min-height: 56px; }
+  .trait-tag {
+    background: var(--cyan-pale);
+    border: 1px solid rgba(0,229,200,0.25);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .feedback { text-align: center; margin-top: 14px; font-family: var(--font-mono); font-size: 12px; min-height: 20px; letter-spacing: 1px; transition: all 0.3s; }
+  .feedback.correct { color: var(--positive-light); }
+  .feedback.wrong { color: var(--negative-light); }
+
+  /* ===== BLITZ GAME ===== */
+  .blitz-timer-wrap { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 24px; }
+  .blitz-timer {
+    font-family: var(--font-mono);
+    font-size: 56px;
+    font-weight: 400;
+    color: var(--cyan);
+    line-height: 1;
+    min-width: 80px;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(0,229,200,0.6);
+    transition: color 0.3s;
+  }
+  .blitz-timer.urgent { color: var(--pink); text-shadow: 0 0 20px rgba(255,45,120,0.6); animation: pulse 0.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .blitz-score-live { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: center; }
+  .blitz-score-live strong { color: var(--cyan); font-size: 22px; text-shadow: 0 0 10px rgba(0,229,200,0.5); }
+
+  .blitz-word-area { text-align: center; margin-bottom: 32px; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .blitz-word {
+    font-family: var(--font-head);
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    text-shadow: 0 0 30px rgba(255,255,255,0.15);
+    animation: wordAppear 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes wordAppear { from { transform: scale(0.7) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+  .blitz-buckets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .bucket-btn {
+    border-radius: 10px;
+    padding: 20px 12px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .bucket-btn .b-icon { font-size: 26px; }
+  .bucket-pos { background: var(--positive); border-color: rgba(0,229,150,0.3); color: var(--positive-light); }
+  .bucket-pos:hover { border-color: var(--positive-light); transform: scale(1.03); box-shadow: 0 0 16px rgba(0,229,150,0.2); }
+  .bucket-neg { background: var(--negative); border-color: rgba(255,45,80,0.3); color: var(--negative-light); }
+  .bucket-neg:hover { border-color: var(--negative-light); transform: scale(1.03); box-shadow: 0 0 16px rgba(255,45,80,0.2); }
+  .bucket-neu { background: var(--neutral); border-color: rgba(80,144,204,0.3); color: var(--neutral-light); }
+  .bucket-neu:hover { border-color: var(--neutral-light); transform: scale(1.03); box-shadow: 0 0 16px rgba(80,144,204,0.2); }
+
+  .bucket-btn.flash-correct { animation: flashGreen 0.3s ease; }
+  .bucket-btn.flash-wrong { animation: flashRed 0.3s ease; }
+  @keyframes flashGreen { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); filter: brightness(1.6); } }
+  @keyframes flashRed { 0%,100% { transform: scale(1); } 50% { transform: scale(0.95); filter: brightness(0.7); } }
+
+  .blitz-start { text-align: center; padding: 40px 20px; }
+  .start-big-btn {
+    background: transparent;
+    color: var(--cyan);
+    border: 1px solid var(--cyan);
+    padding: 16px 48px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(0,229,200,0.15), inset 0 0 20px rgba(0,229,200,0.03);
+  }
+  .start-big-btn:hover {
+    background: rgba(0,229,200,0.08);
+    box-shadow: 0 0 32px rgba(0,229,200,0.3), inset 0 0 20px rgba(0,229,200,0.06);
+    transform: translateY(-2px);
+  }
+
+  /* ===== RESULT SCREEN ===== */
+  .result-screen { text-align: center; padding: 40px 20px; }
+  .result-icon { font-size: 56px; margin-bottom: 16px; }
+  .result-title {
+    font-family: var(--font-head);
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: 0 0 30px rgba(0,229,200,0.5);
+    margin-bottom: 8px;
+  }
+  .result-score { font-family: var(--font-mono); font-size: 14px; color: var(--muted); letter-spacing: 2px; margin-bottom: 32px; }
+  .result-score strong { color: var(--cyan); font-size: 26px; text-shadow: 0 0 16px rgba(0,229,200,0.5); }
+  .result-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 36px; max-width: 600px; margin-left: auto; margin-right: auto; }
+  .result-tag {
+    background: var(--cyan-pale);
+    border: 1px solid rgba(0,229,200,0.25);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+  }
+  .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-gold {
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(0,229,200,0.3);
+  }
+  .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 4px 28px rgba(0,229,200,0.45); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid rgba(0,229,200,0.25);
+    color: var(--muted);
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* Blitz paused overlay */
+  .blitz-paused {
+    display: none;
+    text-align: center;
+    padding: 40px;
+    background: var(--panel);
+    border: 1px solid rgba(0,229,200,0.2);
+    border-radius: 12px;
+  }
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div id="blitz-flash"></div>
+
+
+<!-- QR control -->
+<div id="ui-controls" style="position:fixed;top:16px;right:16px;z-index:100;display:flex;gap:8px;">
+  <button id="qr-btn" onclick="toggleQR()" title="Show QR code" style="background:rgba(13,15,20,0.9);border:1px solid rgba(0,229,200,0.25);color:#00e5c8;width:40px;height:40px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 0 12px rgba(0,229,200,0.1);">📱</button>
+</div>
+
+<!-- QR Modal -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;backdrop-filter:blur(6px);">
+  <div style="background:#13171f;border:1px solid rgba(0,229,200,0.25);border-radius:12px;padding:36px;text-align:center;max-width:320px;width:90%;box-shadow:0 0 40px rgba(0,229,200,0.1);">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#00e5c8;margin-bottom:6px;text-shadow:0 0 12px rgba(0,229,200,0.4);">Share with Students</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#4a6070;margin-bottom:20px;letter-spacing:2px;">SCAN TO OPEN ON ANY DEVICE</div>
+    <div id="qr-container" style="background:#fff;border-radius:8px;padding:16px;display:inline-block;margin-bottom:20px;"></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#4a6070;margin-bottom:20px;word-break:break-all;" id="qr-url-text"></div>
+    <button onclick="toggleQR()" style="background:transparent;color:#00e5c8;border:1px solid rgba(0,229,200,0.4);padding:10px 28px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;transition:all 0.2s;">CLOSE</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ===== MENU ===== -->
+  <div id="screen-menu" class="screen active">
+    <div class="game-header">
+      <div class="eyebrow">Fatih Anadolu High School</div>
+      <h1><span class="friend-part">Friend</span>Zone</h1>
+      <div class="subtitle">Master adjectives describing people</div>
+    </div>
+    <div class="gold-line"></div>
+    <div class="modes-grid">
+      <div class="mode-card" onclick="startMatch()">
+        <span class="mode-icon" style="display:block;line-height:0;">
+          <svg width="112" height="56" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="mg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D4A017"/><stop offset="100%" stop-color="#B8860B"/></linearGradient>
+              <linearGradient id="mg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C8980E"/><stop offset="100%" stop-color="#A07808"/></linearGradient>
+              <clipPath id="mcl"><rect x="340" y="20" width="160" height="180"/></clipPath>
+            </defs>
+            <circle cx="300" cy="110" r="72" fill="none" stroke="url(#mg1)" stroke-width="18"/>
+            <circle cx="380" cy="110" r="72" fill="none" stroke="url(#mg2)" stroke-width="18" clip-path="url(#mcl)"/>
+            <circle cx="300" cy="110" r="72" fill="none" stroke="url(#mg1)" stroke-width="18" clip-path="url(#mcl)"/>
+            <circle cx="300" cy="110" r="40" fill="none" stroke="#D4A017" stroke-width="2" stroke-dasharray="4 6" opacity="0.35"/>
+            <circle cx="380" cy="110" r="40" fill="none" stroke="#B8860B" stroke-width="2" stroke-dasharray="4 6" opacity="0.35"/>
+          </svg>
+        </span>
+        <h2>Adjective Match</h2>
+        <p>Match each adjective with the English clue that best describes it. Can you spot the connection?</p>
+        <span class="mode-badge">Matching</span>
+      </div>
+      <div class="mode-card" onclick="startBuild()">
+        <span class="mode-icon" style="font-size:34px;">🧩</span>
+        <h2>Build Your Friend</h2>
+        <p>Answer scenario questions and build a complete personality profile.</p>
+        <span class="mode-badge">Quiz · 3 Lives</span>
+      </div>
+      <div class="mode-card" onclick="startBlitz()">
+        <span class="mode-icon" style="font-size:34px;">⚡</span>
+        <h2>Adjective Blitz</h2>
+        <p>Sort adjectives into Positive, Negative, or Neutral as fast as you can!</p>
+        <span class="mode-badge">30 Seconds</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MATCH SCREEN ===== -->
+  <div id="screen-match" class="screen">
+    <div class="game-top">
+      <div>
+        <div class="game-title" style="display:flex;align-items:center;gap:10px;">
+          <svg width="80" height="40" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D4A017"/><stop offset="100%" stop-color="#B8860B"/></linearGradient>
+              <linearGradient id="tg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C8980E"/><stop offset="100%" stop-color="#A07808"/></linearGradient>
+              <clipPath id="tcl"><rect x="340" y="20" width="160" height="180"/></clipPath>
+            </defs>
+            <circle cx="300" cy="110" r="72" fill="none" stroke="url(#tg1)" stroke-width="18"/>
+            <circle cx="380" cy="110" r="72" fill="none" stroke="url(#tg2)" stroke-width="18" clip-path="url(#tcl)"/>
+            <circle cx="300" cy="110" r="72" fill="none" stroke="url(#tg1)" stroke-width="18" clip-path="url(#tcl)"/>
+          </svg>
+          Adjective Match
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="status-bar">
+          <div class="status-item">Score <strong id="match-score">0</strong></div>
+          <div class="status-item">Round <strong id="match-round">1</strong>/8</div>
+        </div>
+        <button class="back-btn" onclick="goMenu()">← Menu</button>
+      </div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="match-progress" style="width:0%"></div></div>
+    <p class="match-instruction">Click an adjective, then the clue that best describes it.</p>
+    <div class="match-grid">
+      <div class="match-col" id="match-english"></div>
+      <div class="match-col" id="match-turkish"></div>
+    </div>
+    <div class="feedback" id="match-feedback"></div>
+  </div>
+
+  <!-- ===== BUILD SCREEN ===== -->
+  <div id="screen-build" class="screen">
+    <div class="game-top">
+      <div class="game-title">🧩 Build Your Friend</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="status-bar">
+          <div class="status-item">Score <strong id="build-score">0</strong></div>
+          <div class="lives" id="build-lives"></div>
+        </div>
+        <button class="back-btn" onclick="goMenu()">← Menu</button>
+      </div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="build-progress" style="width:0%"></div></div>
+    <div class="build-layout">
+      <div class="question-card">
+        <div class="question-num" id="build-qnum">Question 1 of 12</div>
+        <div class="question-text" id="build-question"></div>
+        <div class="options-grid" id="build-options"></div>
+        <div class="feedback" id="build-feedback"></div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-avatar">🧑</div>
+        <div class="profile-name">Alex</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Your friend</div>
+        <div class="profile-traits" id="profile-traits">
+          <span style="color:var(--muted);font-size:13px;">Traits will appear here...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BLITZ SCREEN ===== -->
+  <div id="screen-blitz" class="screen">
+    <div class="game-top">
+      <div class="game-title">⚡ Adjective Blitz</div>
+      <button class="back-btn" onclick="goMenu()">← Menu</button>
+    </div>
+
+    <div id="blitz-start-area" class="blitz-start">
+      <p style="color:var(--muted);margin-bottom:8px;font-size:14px;">Sort adjectives into the correct category</p>
+      <div class="gold-line"></div>
+      <div style="display:flex;gap:28px;justify-content:center;margin:24px 0;flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="font-size:28px">✅</div><div style="color:#6fcfa5;font-size:13px;margin-top:6px;">Positive</div></div>
+        <div style="text-align:center;"><div style="font-size:28px">❌</div><div style="color:#e08080;font-size:13px;margin-top:6px;">Negative</div></div>
+      </div>
+      <button class="start-big-btn" onclick="blitzGo()">Start — 30 Seconds</button>
+    </div>
+
+    <div id="blitz-game-area" style="display:none;">
+      <div class="blitz-timer-wrap">
+        <div class="blitz-timer" id="blitz-timer">30</div>
+        <div class="blitz-score-live">Score<br><strong id="blitz-score-live">0</strong></div>
+      </div>
+      <div class="blitz-word-area">
+        <div class="blitz-word" id="blitz-word">—</div>
+      </div>
+      <div class="blitz-buckets" style="grid-template-columns:1fr 1fr;">
+        <button class="bucket-btn bucket-pos" onclick="blitzAnswer('positive')">
+          <span class="b-icon">✅</span>Positive
+        </button>
+        <button class="bucket-btn bucket-neg" onclick="blitzAnswer('negative')">
+          <span class="b-icon">❌</span>Negative
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RESULT SCREEN ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-screen">
+      <div class="result-icon" id="result-icon">🏆</div>
+      <div class="result-title" id="result-title">Well Done!</div>
+      <div class="result-score" id="result-score">You scored <strong>0</strong> points</div>
+      <div class="result-tags" id="result-tags"></div>
+      <div class="btn-group">
+        <button class="btn-gold" id="result-replay">Play Again</button>
+        <button class="btn-outline" onclick="goMenu()">← Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== DATA =====
+
+const adjectives = {
+  positive: [
+    {en:'friendly',tr:'arkadaş canlısı'},{en:'kind',tr:'nazik'},{en:'helpful',tr:'yardımsever'},
+    {en:'honest',tr:'dürüst'},{en:'polite',tr:'kibar'},{en:'generous',tr:'cömert'},
+    {en:'reliable',tr:'güvenilir'},{en:'loyal',tr:'sadık'},{en:'cheerful',tr:'neşeli'},
+    {en:'funny',tr:'komik'},{en:'smart',tr:'zeki'},{en:'clever',tr:'akıllı'},
+    {en:'hardworking',tr:'çalışkan'},{en:'patient',tr:'sabırlı'},{en:'calm',tr:'sakin'},
+    {en:'caring',tr:'şefkatli'},{en:'supportive',tr:'destekleyici'},{en:'understanding',tr:'anlayışlı'},
+    {en:'respectful',tr:'saygılı'},{en:'responsible',tr:'sorumlu'},{en:'brave',tr:'cesur'},
+    {en:'confident',tr:'kendinden emin'},{en:'creative',tr:'yaratıcı'},{en:'energetic',tr:'enerjik'},
+    {en:'sociable',tr:'sosyal'},{en:'outgoing',tr:'dışa dönük'},{en:'optimistic',tr:'iyimser'},
+    {en:'sincere',tr:'samimi'},{en:'thoughtful',tr:'düşünceli'},{en:'fair',tr:'adil'},
+    {en:'trustworthy',tr:'güvenilir'},{en:'dependable',tr:'güvenilir'},{en:'forgiving',tr:'affedici'},
+    {en:'tolerant',tr:'hoşgörülü'},{en:'cooperative',tr:'işbirlikçi'},{en:'faithful',tr:'sadık'},
+    {en:'open-minded',tr:'açık fikirli'},{en:'protective',tr:'koruyucu'},
+  ],
+  negative: [
+    {en:'rude',tr:'kaba'},{en:'selfish',tr:'bencil'},{en:'lazy',tr:'tembel'},
+    {en:'dishonest',tr:'dürüst olmayan'},{en:'impatient',tr:'sabırsız'},{en:'aggressive',tr:'saldırgan'},
+    {en:'arrogant',tr:'kibirli'},{en:'jealous',tr:'kıskanç'},{en:'stubborn',tr:'inatçı'},
+    {en:'mean',tr:'kötü niyetli'},{en:'unfriendly',tr:'soğuk'},{en:'unreliable',tr:'güvenilmez'},
+    {en:'careless',tr:'dikkatsiz'},{en:'insensitive',tr:'duyarsız'},{en:'moody',tr:'huysuz'},
+    {en:'pessimistic',tr:'kötümser'},{en:'irresponsible',tr:'sorumsuz'},{en:'disrespectful',tr:'saygısız'},
+    {en:'bossy',tr:'otoriter'},{en:'greedy',tr:'açgözlü'},
+  ],
+  neutral: []
+};
+
+const allAdj = [
+  ...adjectives.positive.map(a=>({...a,cat:'positive'})),
+  ...adjectives.negative.map(a=>({...a,cat:'negative'})),
+];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goMenu(){
+  if(blitzInterval) clearInterval(blitzInterval);
+  showScreen('screen-menu');
+}
+
+// ===== MATCH GAME =====
+let matchScore=0, matchRound=0, matchSelected=null, matchPairs=[], matchDone=0;
+const MATCH_ROUNDS=8, MATCH_PER_ROUND=5;
+
+const matchClues = {
+  'friendly':    'They wave at everyone in the hallway, even people they barely know.',
+  'kind':        'They notice when you look sad and ask if you\'re okay.',
+  'helpful':     'They stay after class to help you understand what you missed.',
+  'honest':      'They tell you when you have something in your teeth — even if it\'s awkward.',
+  'polite':      'They always say "please" and "thank you," even to the cafeteria staff.',
+  'generous':    'They share their lunch without being asked.',
+  'reliable':    'If they say they\'ll meet you at 8, they\'re there at 7:55.',
+  'loyal':       'They defend you in conversations even when you\'re not in the room.',
+  'cheerful':    'They walk into the room and somehow the energy just lifts.',
+  'funny':       'They turn even a boring bus ride into something you\'ll laugh about for weeks.',
+  'smart':       'They finish the exam early and still get the highest grade.',
+  'clever':      'They find a solution no one else even thought of.',
+  'hardworking': 'They\'re still at the library when you\'re already home.',
+  'patient':     'They explain the same thing five times without sighing.',
+  'calm':        'During the fire drill panic, they\'re the one saying "it\'s fine, let\'s go."',
+  'caring':      'They remember your dentist appointment and text to ask how it went.',
+  'supportive':  'They show up to your game even when the weather is terrible.',
+  'understanding':'They don\'t judge you when you make a mistake — they just listen.',
+  'respectful':  'They let you finish your sentence before they speak.',
+  'responsible': 'They\'re the one who remembers to bring the permission slip for everyone.',
+  'brave':       'They speak up against something unfair, even when it\'s risky.',
+  'confident':   'They walk into the presentation without a single nervous breath.',
+  'creative':    'Their project looks completely different from anyone else\'s — in a great way.',
+  'energetic':   'They want to do one more activity even after a full day out.',
+  'sociable':    'They already know three new people\'s names by the end of lunch.',
+  'outgoing':    'They start conversations with strangers like it\'s the easiest thing in the world.',
+  'optimistic':  'When the trip gets cancelled, they immediately suggest something even better.',
+  'sincere':     'When they say "I\'m happy for you," you can tell they actually mean it.',
+  'thoughtful':  'They bring you a book because it "reminded them of you."',
+  'fair':        'They make sure everyone gets an equal share, even if it means they get less.',
+  'trustworthy': 'You could tell them anything and know it stays between you two.',
+  'dependable':  'They never cancel last minute — not even once.',
+  'forgiving':   'After the argument, they\'re the first one to say "let\'s move on."',
+  'tolerant':    'They don\'t make a big deal out of habits that annoy others.',
+  'cooperative': 'In group projects, they never say "that\'s not my job."',
+  'faithful':    'They\'re still your friend after years of not seeing each other.',
+  'open-minded': 'They consider your idea seriously, even when it challenges their own.',
+  'protective':  'They step in when someone is being treated unfairly.',
+  'rude':        'They interrupt people mid-sentence and don\'t apologize.',
+  'selfish':     'They always pick what they want without asking what you prefer.',
+  'lazy':        'Their half of the group project is always someone else\'s problem.',
+  'dishonest':   'They change their story depending on who\'s listening.',
+  'impatient':   'They tap their foot and sigh loudly while waiting in line.',
+  'aggressive':  'They raise their voice the moment something doesn\'t go their way.',
+  'arrogant':    'They believe they\'re always the smartest person in the room.',
+  'jealous':     'They get cold and distant when something good happens to you.',
+  'stubborn':    'No matter how good your argument is, they won\'t change their mind.',
+  'mean':        'They say things that hurt and then act like it was just a joke.',
+  'unfriendly':  'They walk past you every day without ever making eye contact.',
+  'unreliable':  'You never quite know if they\'ll actually show up.',
+  'careless':    'They forget important things and shrug it off like it doesn\'t matter.',
+  'insensitive': 'They say the wrong thing at the worst possible moment and don\'t notice.',
+  'moody':       'You never know which version of them is going to walk in today.',
+  'pessimistic': 'Every plan you suggest, they immediately list why it won\'t work.',
+  'irresponsible':'They borrow things and return them broken — or not at all.',
+  'disrespectful':'They talk over the teacher and roll their eyes when corrected.',
+  'bossy':       'They take over every group activity and act like their way is the only way.',
+  'greedy':      'They take more than their share and don\'t even notice.',
+  'talkative':   'You can\'t pass them in the hall without a full ten-minute conversation.',
+  'easygoing':   'Plans change last minute — they just say "sure, whatever works."',
+  'quiet':       'They\'re in the room, contributing, but you barely hear their voice.',
+  'shy':         'They go red when the teacher calls on them unexpectedly.',
+  'serious':     'They rarely laugh during class — they\'re always focused on the task.',
+  'emotional':   'A sad movie ending hits them much harder than anyone else.',
+  'sensitive':   'Small comments affect them more than others might expect.',
+  'curious':     'They ask "but why?" even after the explanation is over.',
+  'ambitious':   'They\'re already thinking about the next goal before this one is done.',
+  'independent': 'They prefer to figure things out on their own before asking for help.',
+  'relaxed':     'Nothing seems to stress them out — they take everything in stride.',
+  'ordinary':    'They\'re comfortable just blending in — nothing flashy, just solid.',
+  'different':   'Their taste in music, films, and style doesn\'t match anyone else\'s.',
+  'simple':      'They don\'t need much — a quiet day and good company is enough.',
+  'natural':     'They don\'t try to impress anyone — what you see is what you get.',
+  'normal':      'They fit in easily wherever they go without standing out.',
+  'modern':      'They\'re always up to date on the latest trends and technology.',
+  'tall':        'They can reach the top shelf without thinking twice.',
+  'short':       'They always end up in the front row of every class photo.',
+  'beautiful':   'People often do a double-take when they walk into a room.',
+  'handsome':    'He always looks put-together, even on a casual day.',
+  'attractive':  'There\'s something about them that draws people\'s attention naturally.',
+};
+
+function startMatch(){
+  matchScore=0; matchRound=0; matchSelected=null; matchDone=0;
+  document.getElementById('match-score').textContent='0';
+  showScreen('screen-match');
+  nextMatchRound();
+}
+
+function nextMatchRound(){
+  if(matchRound>=MATCH_ROUNDS){ showMatchResult(); return; }
+  matchRound++;
+  matchSelected=null; matchDone=0;
+  document.getElementById('match-round').textContent=matchRound;
+  document.getElementById('match-progress').style.width=((matchRound-1)/MATCH_ROUNDS*100)+'%';
+  document.getElementById('match-feedback').textContent='';
+
+  const pool = shuffle(allAdj).slice(0,MATCH_PER_ROUND);
+  matchPairs = pool.map(a=>({en:a.en, tr:matchClues[a.en]||'—'}));
+
+  const enShuffled = shuffle(matchPairs.map(p=>p.en));
+  const trShuffled = shuffle(matchPairs.map(p=>p.tr));
+
+  const enCol=document.getElementById('match-english');
+  const trCol=document.getElementById('match-turkish');
+  enCol.innerHTML=''; trCol.innerHTML='';
+
+  enShuffled.forEach(word=>{
+    const el=document.createElement('div');
+    el.className='match-card';
+    el.dataset.type='en';
+    el.dataset.val=word;
+    el.textContent=word;
+    el.onclick=()=>matchClick(el);
+    enCol.appendChild(el);
+  });
+  trShuffled.forEach(word=>{
+    const el=document.createElement('div');
+    el.className='match-card';
+    el.dataset.type='tr';
+    el.dataset.val=word;
+    el.textContent=word;
+    el.onclick=()=>matchClick(el);
+    trCol.appendChild(el);
+  });
+}
+
+function matchClick(el){
+  if(el.classList.contains('matched')||el.classList.contains('correct')) return;
+  if(matchSelected===null){
+    document.querySelectorAll('.match-card.selected').forEach(c=>c.classList.remove('selected'));
+    el.classList.add('selected');
+    matchSelected=el;
+  } else {
+    if(matchSelected===el){ el.classList.remove('selected'); matchSelected=null; return; }
+    const a=matchSelected, b=el;
+    const enEl = a.dataset.type==='en'?a:b;
+    const trEl = a.dataset.type==='tr'?a:b;
+    if(!enEl||!trEl||enEl.dataset.type===trEl.dataset.type){ 
+      a.classList.remove('selected'); 
+      b.classList.add('selected'); 
+      matchSelected=b; 
+      return; 
+    }
+    const pair=matchPairs.find(p=>p.en===enEl.dataset.val);
+    if(pair && pair.tr===trEl.dataset.val){
+      enEl.classList.remove('selected'); trEl.classList.remove('selected');
+      enEl.classList.add('matched'); trEl.classList.add('matched');
+      matchScore+=10;
+      document.getElementById('match-score').textContent=matchScore;
+      matchSelected=null;
+      matchDone++;
+      const fb=document.getElementById('match-feedback');
+      fb.textContent='✓ Correct!'; fb.className='feedback correct';
+      if(matchDone>=MATCH_PER_ROUND){ setTimeout(nextMatchRound,600); }
+    } else {
+      enEl.classList.add('wrong'); trEl.classList.add('wrong');
+      const fb=document.getElementById('match-feedback');
+      fb.textContent='✗ Try again!'; fb.className='feedback wrong';
+      setTimeout(()=>{ enEl.classList.remove('wrong','selected'); trEl.classList.remove('wrong','selected'); },700);
+      matchSelected=null;
+    }
+  }
+}
+
+function showMatchResult(){
+  document.getElementById('match-progress').style.width='100%';
+  setTimeout(()=>{
+    const matchIconSVG = `<svg width="128" height="64" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D4A017"/><stop offset="100%" stop-color="#B8860B"/></linearGradient><linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#C8980E"/><stop offset="100%" stop-color="#A07808"/></linearGradient><clipPath id="rcl"><rect x="340" y="20" width="160" height="180"/></clipPath></defs><circle cx="300" cy="110" r="72" fill="none" stroke="url(#rg1)" stroke-width="18"/><circle cx="380" cy="110" r="72" fill="none" stroke="url(#rg2)" stroke-width="18" clip-path="url(#rcl)"/><circle cx="300" cy="110" r="72" fill="none" stroke="url(#rg1)" stroke-width="18" clip-path="url(#rcl)"/><circle cx="300" cy="110" r="40" fill="none" stroke="#D4A017" stroke-width="2" stroke-dasharray="4 6" opacity="0.35"/><circle cx="380" cy="110" r="40" fill="none" stroke="#B8860B" stroke-width="2" stroke-dasharray="4 6" opacity="0.35"/></svg>`;
+    document.getElementById('result-icon').innerHTML = matchIconSVG;
+    showResult('','Adjective Match Complete!', matchScore, 'match');
+  },400);
+}
+
+// ===== BUILD GAME =====
+const buildQuestions = [
+  {q:'Your friend always tells the truth, no matter what.', answer:'honest', options:['honest','selfish','lazy','rude']},
+  {q:'Your friend helps you whenever you need it.', answer:'helpful', options:['helpful','stubborn','moody','careless']},
+  {q:'Your friend keeps your secrets and never betrays you.', answer:'loyal', options:['loyal','arrogant','bossy','greedy']},
+  {q:'Your friend is always smiling and in a good mood.', answer:'cheerful', options:['cheerful','pessimistic','aggressive','unfriendly']},
+  {q:'Your friend stays cool even in stressful situations.', answer:'calm', options:['calm','impatient','jealous','mean']},
+  {q:'Your friend comes up with amazing new ideas.', answer:'creative', options:['creative','ordinary','lazy','dishonest']},
+  {q:'Your friend always does what they promise to do.', answer:'reliable', options:['reliable','unreliable','moody','irresponsible']},
+  {q:'Your friend is never afraid to speak up for others.', answer:'brave', options:['brave','shy','quiet','sensitive']},
+  {q:'Your friend loves meeting new people and socializing.', answer:'outgoing', options:['outgoing','stubborn','bossy','selfish']},
+  {q:'Your friend is kind to everyone around them.', answer:'kind', options:['kind','rude','arrogant','aggressive']},
+  {q:'Your friend always sees the bright side of things.', answer:'optimistic', options:['optimistic','pessimistic','moody','unfriendly']},
+  {q:'Your friend treats everyone fairly and equally.', answer:'fair', options:['fair','greedy','selfish','dishonest']},
+];
+
+let buildScore=0, buildQ=0, buildLives=3, buildTraits=[], buildQList=[];
+
+function startBuild(){
+  buildScore=0; buildQ=0; buildLives=3; buildTraits=[];
+  buildQList=shuffle(buildQuestions).slice(0,12);
+  document.getElementById('build-score').textContent='0';
+  renderLives();
+  document.getElementById('profile-traits').innerHTML='<span style="color:var(--muted);font-size:13px;">Traits will appear here...</span>';
+  showScreen('screen-build');
+  showBuildQ();
+}
+
+function renderLives(){
+  const el=document.getElementById('build-lives');
+  el.innerHTML='';
+  for(let i=0;i<3;i++){
+    const h=document.createElement('span');
+    h.className='life'+(i>=buildLives?' lost':'');
+    h.textContent='❤️';
+    el.appendChild(h);
+  }
+}
+
+function showBuildQ(){
+  if(buildQ>=buildQList.length||buildLives<=0){ showBuildResult(); return; }
+  const q=buildQList[buildQ];
+  document.getElementById('build-qnum').textContent=`Question ${buildQ+1} of ${buildQList.length}`;
+  document.getElementById('build-question').textContent=q.q;
+  document.getElementById('build-progress').style.width=(buildQ/buildQList.length*100)+'%';
+  document.getElementById('build-feedback').textContent='';
+  const opts=document.getElementById('build-options');
+  opts.innerHTML='';
+  shuffle(q.options).forEach(opt=>{
+    const b=document.createElement('button');
+    b.className='option-btn';
+    b.textContent=opt;
+    b.onclick=()=>buildAnswer(b,opt,q.answer);
+    opts.appendChild(b);
+  });
+}
+
+function buildAnswer(btn, chosen, correct){
+  document.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);
+  const fb=document.getElementById('build-feedback');
+  if(chosen===correct){
+    btn.classList.add('correct');
+    fb.textContent='✓ Correct! +10 points'; fb.className='feedback correct';
+    buildScore+=10;
+    document.getElementById('build-score').textContent=buildScore;
+    buildTraits.push(chosen);
+    const tp=document.getElementById('profile-traits');
+    if(tp.querySelector('span[style]')) tp.innerHTML='';
+    const tag=document.createElement('span');
+    tag.className='trait-tag'; tag.textContent=chosen;
+    tp.appendChild(tag);
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.option-btn').forEach(b=>{ if(b.textContent===correct) b.classList.add('correct'); });
+    fb.textContent=`✗ The answer was "${correct}"`; fb.className='feedback wrong';
+    buildLives--;
+    renderLives();
+  }
+  buildQ++;
+  setTimeout(showBuildQ, 1200);
+}
+
+function showBuildResult(){
+  document.getElementById('build-progress').style.width='100%';
+  setTimeout(()=>{
+    showResult('🧩','Friend Profile Complete!', buildScore, 'build', buildTraits);
+  },400);
+}
+
+// ===== BLITZ GAME =====
+let blitzScore=0, blitzTimer=30, blitzInterval=null, blitzPool=[], blitzCurrent=null, blitzAnswered=0;
+
+function startBlitz(){
+  showScreen('screen-blitz');
+  document.getElementById('blitz-start-area').style.display='block';
+  document.getElementById('blitz-game-area').style.display='none';
+}
+
+function blitzGo(){
+  blitzScore=0; blitzTimer=30; blitzAnswered=0;
+  blitzPool=shuffle(allAdj);
+  document.getElementById('blitz-start-area').style.display='none';
+  document.getElementById('blitz-game-area').style.display='block';
+  document.getElementById('blitz-score-live').textContent='0';
+  nextBlitzWord();
+  blitzInterval=setInterval(()=>{
+    blitzTimer--;
+    const el=document.getElementById('blitz-timer');
+    el.textContent=blitzTimer;
+    el.className='blitz-timer'+(blitzTimer<=10?' urgent':'');
+    if(blitzTimer<=10){ playSound('blitz-tick'); }
+    if(blitzTimer<=0){ clearInterval(blitzInterval); showBlitzResult(); }
+  },1000);
+}
+
+function nextBlitzWord(){
+  if(!blitzPool.length) blitzPool=shuffle(allAdj);
+  blitzCurrent=blitzPool.pop();
+  const el=document.getElementById('blitz-word');
+  el.textContent=blitzCurrent.en;
+  el.style.animation='none';
+  void el.offsetWidth;
+  el.style.animation='wordAppear 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+}
+
+function blitzAnswer(cat){
+  if(!blitzCurrent||blitzTimer<=0) return;
+  const btns=document.querySelectorAll('.bucket-btn');
+  const map={positive:0,negative:1,neutral:2};
+  const btn=btns[map[cat]];
+  if(blitzCurrent.cat===cat){
+    blitzScore+=5;
+    document.getElementById('blitz-score-live').textContent=blitzScore;
+    btn.classList.add('flash-correct');
+    setTimeout(()=>btn.classList.remove('flash-correct'),300);
+  } else {
+    blitzScore=Math.max(0,blitzScore-2);
+    document.getElementById('blitz-score-live').textContent=blitzScore;
+    btn.classList.add('flash-wrong');
+    setTimeout(()=>btn.classList.remove('flash-wrong'),300);
+  }
+  blitzAnswered++;
+  nextBlitzWord();
+}
+
+function showBlitzResult(){
+  setTimeout(()=>{
+    showResult('⚡','Blitz Complete!', blitzScore, 'blitz');
+  },300);
+}
+
+// ===== RESULT =====
+let lastMode='';
+function showResult(icon, title, score, mode, traits=[]){
+  lastMode=mode;
+  const iconEl = document.getElementById('result-icon');
+  if(icon) iconEl.textContent=icon; // else innerHTML was set by caller
+  document.getElementById('result-title').textContent=title;
+  const s=document.getElementById('result-score');
+  let msg='';
+  if(score>=80) msg='Outstanding performance! 🌟';
+  else if(score>=50) msg='Great job! Keep it up! 👏';
+  else msg='Good effort! Practice more! 💪';
+  s.innerHTML=`You scored <strong>${score}</strong> points — ${msg}`;
+  const tagsEl=document.getElementById('result-tags');
+  tagsEl.innerHTML='';
+  if(traits.length){
+    traits.forEach(t=>{ const sp=document.createElement('span'); sp.className='result-tag'; sp.textContent=t; tagsEl.appendChild(sp); });
+  }
+  document.getElementById('result-replay').onclick=()=>{
+    if(mode==='match') startMatch();
+    else if(mode==='build') startBuild();
+    else if(mode==='blitz') startBlitz();
+  };
+  showScreen('screen-result');
+}
+
+// ===== SCREEN TINTS =====
+const screenTints = {
+  'screen-menu':   'transparent',
+  'screen-match':  'radial-gradient(ellipse at 50% 100%, rgba(184,134,11,0.07) 0%, transparent 70%)',
+  'screen-build':  'radial-gradient(ellipse at 50% 100%, rgba(45,106,79,0.08) 0%, transparent 70%)',
+  'screen-blitz':  'radial-gradient(ellipse at 50% 100%, rgba(58,80,104,0.12) 0%, transparent 70%)',
+  'screen-result': 'radial-gradient(ellipse at 50% 50%, rgba(184,134,11,0.1) 0%, transparent 65%)',
+};
+const _origShowScreen = showScreen;
+window.showScreen = function(id) {
+  _origShowScreen(id);
+  document.body.style.setProperty('--screen-tint', screenTints[id] || 'transparent');
+};
+
+// ===== BLITZ RED FLASH =====
+function triggerBlitzFlash() {
+  const el = document.getElementById('blitz-flash');
+  el.classList.remove('active');
+  void el.offsetWidth;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 1500);
+}
+const _origShowBlitzResult = showBlitzResult;
+window.showBlitzResult = function() {
+  triggerBlitzFlash();
+  setTimeout(() => {
+    showResult('⚡','Blitz Complete!', blitzScore, 'blitz');
+  }, 500);
+};
+
+// Sound effects
+let sfxCtx = null;
+function playSound(type) {
+  if (!sfxCtx) sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (sfxCtx.state === 'suspended') sfxCtx.resume();
+  const osc = sfxCtx.createOscillator();
+  const g = sfxCtx.createGain();
+  osc.connect(g); g.connect(sfxCtx.destination);
+  const now = sfxCtx.currentTime;
+  if (type === 'correct') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523, now);
+    osc.frequency.setValueAtTime(659, now + 0.08);
+    g.gain.setValueAtTime(0.18, now);
+    g.gain.linearRampToValueAtTime(0, now + 0.25);
+    osc.start(now); osc.stop(now + 0.25);
+  } else if (type === 'wrong') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.linearRampToValueAtTime(150, now + 0.18);
+    g.gain.setValueAtTime(0.12, now);
+    g.gain.linearRampToValueAtTime(0, now + 0.2);
+    osc.start(now); osc.stop(now + 0.2);
+  } else if (type === 'blitz-tick') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    g.gain.setValueAtTime(0.08, now);
+    g.gain.linearRampToValueAtTime(0, now + 0.05);
+    osc.start(now); osc.stop(now + 0.05);
+  }
+}
+
+// Hook sounds into existing answer functions
+const _origBuildAnswer = buildAnswer;
+window.buildAnswer = function(btn, chosen, correct) {
+  playSound(chosen === correct ? 'correct' : 'wrong');
+  _origBuildAnswer(btn, chosen, correct);
+};
+const _origMatchClick_sound = matchClick;
+window.matchClick = function(el) {
+  _origMatchClick_sound(el);
+};
+
+// ===== QR CODE =====
+let qrGenerated = false;
+function toggleQR() {
+  const modal = document.getElementById('qr-modal');
+  const isOpen = modal.style.display === 'flex';
+  if (isOpen) { modal.style.display = 'none'; return; }
+  modal.style.display = 'flex';
+  if (!qrGenerated) {
+    const url = window.location.href;
+    document.getElementById('qr-url-text').textContent = url;
+    new QRCode(document.getElementById('qr-container'), {
+      text: url, width: 180, height: 180,
+      colorDark: '#1E1E2E', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    qrGenerated = true;
+  }
+}
+document.getElementById('qr-modal').addEventListener('click', function(e) {
+  if (e.target === this) toggleQR();
+});
+</script>
+</body>
+</html>
